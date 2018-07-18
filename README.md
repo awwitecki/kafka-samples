@@ -22,7 +22,7 @@ docker port kafka-samples_kafka_3
 ```
 This will start up **1 Zookeeper** node and **3 Kafka** nodes, which will be available under:
 * Zookeeper: `localhost:2181`
-* Kafka: `localhost:9092`, `localhost:9093`, `localhost:9094`
+* Kafka: `localhost:<port_1>`, `localhost:<port_2>`, `localhost:<port_3>`
 
 When you're done playing you can shutdown everything with `docker-compose down`.
 
@@ -30,4 +30,3 @@ When you're done playing you can shutdown everything with `docker-compose down`.
 You may find them in the related Java packages, i.e.
 1. Classic approach - `com.example.kafka.classic`
 2. Kafka Streams - `com.example.kafka.streams`
-3. Fail over - `com.example.kafka.failover`
