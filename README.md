@@ -30,3 +30,4 @@ When you're done playing you can shutdown everything with `docker-compose down`.
 You may find them in the related Java packages, i.e.
 1. Classic approach - `com.example.kafka.classic`
 2. Kafka Streams - `com.example.kafka.streams`
+3. Fail-over - `com.example.kafka.failover`
