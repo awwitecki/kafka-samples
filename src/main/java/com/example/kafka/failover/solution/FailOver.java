@@ -2,6 +2,7 @@ package com.example.kafka.failover.solution;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -13,27 +14,30 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class FailOver {
 
     private static final String KAFKA_TOPIC = "fail-over";
-    private static final String KAFKA_BROKERS = "localhost:32811";
+    private static final String KAFKA_BROKERS = "localhost:32812";
+    private static final Seq<Integer> CONSUMPTION_DISTRIBUTION = List.of(30, 30, 30);
+    private static final Integer TOTAL_CONSUMPTION = CONSUMPTION_DISTRIBUTION.sum().intValue();
 
     public static void main(String[] args) throws Exception {
-        List.of(30, 30, 30)
+        CONSUMPTION_DISTRIBUTION
             .map(FailOver::createConsumptionThread)
             .forEach(Thread::start);
         Thread.sleep(500);
         produceEvents();
     }
 
-    private static void produceEvents() throws InterruptedException, java.util.concurrent.ExecutionException, java.util.concurrent.TimeoutException {
+    private static void produceEvents() throws Exception {
         final Map<String, Object> producerConfiguratiom = createProducerConfiguratiom();
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(producerConfiguratiom)) {
-            for (int i = 0; i < 90; ++i) {
+            for (int i = 0; i < TOTAL_CONSUMPTION; ++i) {
                 final ProducerRecord<String, String> record = createKafkaEvent(i);
-                producer.send(record).get(2, TimeUnit.SECONDS);
+                producer.send(record).get(5, SECONDS);
             }
             producer.flush();
         }

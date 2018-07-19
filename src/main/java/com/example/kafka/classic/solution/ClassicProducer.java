@@ -7,7 +7,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class ClassicProducer {
 
@@ -19,7 +20,7 @@ public class ClassicProducer {
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(producerConfiguratiom)) {
             for (int i = 0; i < 10; ++i) {
                 final ProducerRecord<String, String> record = createKafkaEvent(i);
-                producer.send(record).get(2, TimeUnit.SECONDS);
+                producer.send(record).get(2, SECONDS);
             }
             producer.flush();
         }

@@ -2,7 +2,7 @@ package com.example.kafka.classic.solution;
 
 import io.vavr.collection.HashMap;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
@@ -16,13 +16,17 @@ public class ClassicConsumer {
 
     public static void main(String[] args) {
         final Map<String, Object> consumerConfiguration = createConsumerConfiguration();
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerConfiguration)){
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerConfiguration)) {
             consumer.subscribe(Collections.singleton(KAFKA_TOPIC));
             while (true) {
-                final ConsumerRecords<String, String> records = consumer.poll(1000);
-                records.forEach(it -> System.out.println(String.format("%d:%d - [%s; %s]", it.partition(), it.offset(), it.key(), it.value())));
+                consumer.poll(1000)
+                    .forEach(it -> System.out.println(formatEvent(it)));
             }
         }
+    }
+
+    private static String formatEvent(ConsumerRecord<String, String> it) {
+        return String.format("%d:%d - [%s; %s]", it.partition(), it.offset(), it.key(), it.value());
     }
 
     private static Map<String, Object> createConsumerConfiguration() {

@@ -8,6 +8,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.ValueMapper;
 
@@ -20,17 +21,22 @@ public class EventEnricher {
 
     public static void main(String[] args) {
         final StreamsConfig streamConfiguration = createStreamConfiguration();
+        final Topology streamTopology = buildStreamTopology();
+        final KafkaStreams streams = new KafkaStreams(streamTopology, streamConfiguration);
+        streams.cleanUp();
+        streams.start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+    }
+
+    private static Topology buildStreamTopology() {
         final StreamsBuilder builder = new StreamsBuilder();
         final KStream<String, String> stream = builder.stream(KAFKA_TOPIC, Consumed.with(KEY_SERDE, VALUE_SERDE))
             .mapValues((ValueMapper<String, String>) String::toUpperCase)
             .through("upper-classic-10")
             .map((k, v) -> new KeyValue<>("FIXED_KEY", v + "_withFixedKey"));
         stream.to("fixed-upper-classic-10");
-        final KafkaStreams streams = new KafkaStreams(builder.build(), streamConfiguration);
-        streams.cleanUp();
-        streams.start();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        return builder.build();
     }
 
     private static StreamsConfig createStreamConfiguration() {
