@@ -14,28 +14,34 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class FailOver {
 
     private static final String KAFKA_TOPIC = "fail-over";
-    private static final String KAFKA_BROKERS = "localhost:32812";
-    private static final Seq<Integer> CONSUMPTION_DISTRIBUTION = List.of(30, 30, 30);
-    private static final Integer TOTAL_CONSUMPTION = CONSUMPTION_DISTRIBUTION.sum().intValue();
+    private static final String KAFKA_BROKERS = "localhost:32816";
+
+    private final Seq<Integer> consumptionDistribution = List.of(30, 30, 30);
+    private final Integer totalConsumption = consumptionDistribution.sum().intValue();
+    private final ExecutorService executor = Executors.newFixedThreadPool(3);
 
     public static void main(String[] args) throws Exception {
-        CONSUMPTION_DISTRIBUTION
-            .map(FailOver::createConsumptionThread)
-            .forEach(Thread::start);
+        final FailOver failOver = new FailOver();
+        failOver.
+            consumptionDistribution
+            .map(FailOver::createConsumptionJob)
+            .forEach(failOver.executor::submit);
         Thread.sleep(500);
-        produceEvents();
+        failOver.produceEvents();
     }
 
-    private static void produceEvents() throws Exception {
+    private void produceEvents() throws Exception {
         final Map<String, Object> producerConfiguratiom = createProducerConfiguratiom();
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(producerConfiguratiom)) {
-            for (int i = 0; i < TOTAL_CONSUMPTION; ++i) {
+            for (int i = 0; i < totalConsumption; ++i) {
                 final ProducerRecord<String, String> record = createKafkaEvent(i);
                 producer.send(record).get(5, SECONDS);
             }
@@ -59,8 +65,8 @@ public class FailOver {
         ).toJavaMap();
     }
 
-    private static Thread createConsumptionThread(int failOnCount) {
-        return new Thread(() -> {
+    private static Runnable createConsumptionJob(int failOnCount) {
+        return () -> {
             System.out.println(String.format("%d - failOnCount: %d", Thread.currentThread().getId(), failOnCount));
             final Map<String, Object> consumerConfiguration = createConsumerConfiguration();
             final KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerConfiguration);
@@ -77,8 +83,7 @@ public class FailOver {
                     break;
                 }
             }
-            Thread.currentThread().stop();
-        });
+        };
     }
 
     private static String formatKafkaEvent(ConsumerRecord<String, String> record) {
